@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1024" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <title>impress.js | presentation tool based on the power of CSS3 transforms and transitions in modern browsers | by Bartek Szopka @bartaz</title>
+
+    <meta name="description" content="impress.js is a presentation tool based on the power of CSS3 transforms and transitions in modern browsers and inspired by the idea behind prezi.com." />
+    <meta name="author" content="Bartek Szopka" />
+
+    <link href="http://fonts.googleapis.com/css?family=Open+Sans:regular,semibold,italic,italicsemibold|PT+Sans:400,700,400italic,700italic|PT+Serif:400,700,400italic,700italic" rel="stylesheet" />
+    <link href="css/impress-demo.css" rel="stylesheet" />
+
+    <link rel="shortcut icon" href="favicon.png" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <style>
+        .container {
+            width: 1000px;
+            margin: 0 auto;
+            padding: 50px 0 100px 0;
+        }
+        .preview {
+            position: relative;
+        }
+        .control-icon {
+            box-sizing: border-box;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            cursor: pointer;
+            z-index: 100;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+        .play {
+            width: 22px;
+            height: 26px;
+            border-top: 18px solid transparent;
+            border-left: 28px solid #fff;
+            border-bottom: 18px solid transparent;
+            transition: all .3s linear;
+            background: transparent;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+        .pause {
+            width: 28px;
+            height: 36px;
+            border-right: 10px solid #fff;
+            border-left: 10px solid #fff;
+            transition: all .3s linear;
+            background: transparent;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+        .progress {
+            width: 100%;
+            margin-top: 50px;
+            padding: 10px 0 0 0;
+            position: relative
+        }
+        .progress-bar {
+            position: relative;
+            border-top: 5px solid #666;
+            cursor: pointer;
+        }
+        .progress-thumb {
+            z-index: 10;
+            width: 25px;
+            height: 25px;
+            position: absolute;
+            left: 0px;
+            bottom: -10px;
+            margin-left: -12px;
+            background: grey;
+            border-radius: 50%;
+            transition: all 0.2s linear;
+            cursor: pointer;
+        }
+        .progress-thumb:hover {
+            transform: scale(1.1);
+            background: lightgrey;
+        }
+        .progress-thumb:active {
+            transform: scale(0.9);
+            opacity: .9;
+        }
+        .marker-thumb:before {
+            content: '▴';
+            top: -10px;
+            left: -5.5px;
+            position: absolute;
+        }
+        .marker-thumb {
+            position: absolute;
+            z-index: 100;
+            top: 10px;
+            height: 40px;
+            border-left: 2px solid #666;
+            transition: all .3s linear;
+            padding: 0 2px;
+            cursor: ew-resize;
+        }
+        .marker-text {
+            box-sizing: border-box;
+            position: relative;
+            z-index: 0;
+            margin-top: 40px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-left: -25px;
+            border: 2px solid #333;
+            transition: all .3s linear;
+            padding: 10px;
+            overflow: hidden;
+            color: transparent;
+            background: #fff;
+            cursor: text;
+        }
+        .marker-text:focus {
+            width: 200px;
+            position: relative;
+            z-index: 100;
+            margin-left: -100px;
+            border-radius: 0%;
+            padding: 3px;
+            color: #333;
+        }
+        .marker-thumb.on-focus {
+            z-index: 10000;
+        }
+        .markers-container {
+            position: relative;
+        }
+        .markers-area {
+            position: relative;
+            height: 40px;
+            background: lightyellow;
+            cursor: n-resize;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="preview">
+            <!-- <div class="control-icon play"></div> -->
+            <div class="control-icon play"></div>
+            <video width="1000" id="video_player" preload="metadata" muted>
+                <source src="/video/APEXPOINT.mp4" type="video/mp4" />
+                <source src="/video/APEXPOINT.ogv" type="video/ogg" />
+                <source src="/video/APEXPOINT.webm" type="video/mp4" />
+                <source src="/video/APEXPOINT.flv" type="video/ogg" />
+            </video>
+        </div>
+        <div class="video-controls">
+            <div class="progress">
+                <div class="progress-bar"></div>
+                <div class="progress-thumb"></div>
+            </div>
+            <div class="markers-container">
+                <div class="markers-area"></div>
+            </div>
+        </div>
+    </div>
+    <script src="/js/jquery.js"></script>
+    <!-- <script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script> -->
+    <script>
+        (function() {
+            var progressBar,
+                progressStep,
+                videoDuration,
+                marker;
+
+            progressBar = $('.progress-bar').width();
+
+            var v = document.getElementById('video_player');
+            videoDuration = Math.round(v.duration);
+            v.addEventListener('loadedmetadata', function() {
+                videoDuration = Math.round(v.duration);
+            });
+            progressStep = Math.round(progressBar / videoDuration);
+
+
+            $("video").on("timeupdate", function(event){
+                onTrackedVideoFrame(this.currentTime, this.duration);
+            });
+
+
+            this.onTrackedVideoFrame = function(currentTime, duration){
+                $('.marker').text(currentTime);
+                var percentage = 100 * currentTime / duration;
+                $('.progress-thumb').css({left: percentage + "%"})
+                currentTime == duration ? $('.control-icon').removeClass('pause').addClass('play') && $('.progress-thumb').css({left: 0}) : false
+            };
+            v.onplaying = function() { $('.control-icon').removeClass('play').addClass('pause'); };
+            v.onpause = function() { $('.control-icon').removeClass('pause').addClass('play'); };
+            $('.control-icon').on('click', function(){
+                if ($(this).hasClass('play')) {
+                    $(this).removeClass('play').addClass('pause');
+                    v.play();
+                } else {
+                    $(this).removeClass('pause').addClass('play');
+                    v.pause();
+                }
+            });
+            $('.progress-bar').on('click', function(e){
+                var widthPercents = $(this).width() / 100;
+                var positionX = (e.pageX - $(this).offset().left) / widthPercents;
+                $('.progress-thumb').css({left: positionX + "%"})
+                var durationPercent = videoDuration / 100;
+                v.currentTime = positionX * durationPercent;
+            });
+            $('.markers-area').on('click', function(e){
+                $this = $(this);
+                $root = $this.closest('.markers-container');
+                var positionX = (e.pageX - $this.offset().left);
+                setMarker($root, positionX);
+
+            });
+            this.setMarker = function(root, position) {
+                root.append("<div class='marker-thumb' style='left: " + position + "px'><div class='marker-text' contenteditable></div></div>");
+            };
+
+            $('body').on('.marker-text', 'focus', function(){
+                $(this).addClass('on-focus');
+            });
+
+        }).call(this);
+    </script>
+</body>
+</html>
